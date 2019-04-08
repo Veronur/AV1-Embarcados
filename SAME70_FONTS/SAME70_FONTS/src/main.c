@@ -42,6 +42,8 @@
 #include "calibri_36.h"
 #include "arial_72.h"
 
+#define PI 3.14
+
 struct ili9488_opt_t g_ili9488_display_opt;
 
 
@@ -49,7 +51,8 @@ struct ili9488_opt_t g_ili9488_display_opt;
 /* Variaveis globais                                                           */
 /************************************************************************/
 
-char buffer[32];
+volatile int N = 0;
+volatile Bool butR_flag;
 
 /************************************************************************/
 /* Handlers                                                             */
@@ -59,63 +62,60 @@ char buffer[32];
 /**
 *  Interrupt handler for TC1 interrupt.
 */
-void TC1_Handler(void){
-	volatile uint32_t ul_dummy;
-
-	/****************************************************************
-	* Devemos indicar ao TC que a interrupção foi satisfeita.
-	******************************************************************/
-	ul_dummy = tc_get_status(TC0, 1);
-
-	/* Avoid compiler warning */
-	UNUSED(ul_dummy);
-
-	/** Muda o estado do LED */
-	if(flag_led0)
-		pin_toggle(LED_PIO, LED_PIN_MASK);
-}
+//void tc1_handler(void){
+	//volatile uint32_t ul_dummy;
+//
+	///****************************************************************
+	//* devemos indicar ao tc que a interrupção foi satisfeita.
+	//******************************************************************/
+	//ul_dummy = tc_get_status(tc0, 1);
+//
+	///* avoid compiler warning */
+	//unused(ul_dummy);
+//
+//}
 
 /**
 * \brief Interrupt handler for the RTC. Refresh the display.
 */
-void RTC_Handler(void)
-{	
-	/* Iniciar variaveis para setar localmente o horario atual durante a interrupcao*/
-	unsigned int hora, minuto, segundo;
-	uint32_t ul_status = rtc_get_status(RTC);
-
-	/*
-	*  Verifica por qual motivo entrou
-	*  na interrupcao, se foi por segundo
-	*  ou Alarm
-	*/
-	if ((ul_status & RTC_SR_SEC) == RTC_SR_SEC) {
-		rtc_clear_status(RTC, RTC_SCCR_SECCLR);
-	}
-	
-	/* Time or date alarm */
-	/* O que vai fazer na interrupcao*/
-	if ((ul_status & RTC_SR_ALARM) == RTC_SR_ALARM) {
-			rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
-
-			flag_led0 = !flag_led0;
-			
-	}
-	
-	//Para o alarme continuar mesmo dps de 1 minuto.
-	if (segundo >=59){
-		minuto +=1;
-	}
-	/*Escrever nas variaveis o horario atual*/
-	rtc_get_time(RTC, &hora,&minuto,&segundo);
-	/*A cada interrupcao iniciar o proximo alarme*/
-	rtc_set_time_alarm(RTC,1,hora,1,minuto,1,segundo+5);
-	rtc_clear_status(RTC, RTC_SCCR_ACKCLR);
-	rtc_clear_status(RTC, RTC_SCCR_TIMCLR);
-	rtc_clear_status(RTC, RTC_SCCR_CALCLR);
-	rtc_clear_status(RTC, RTC_SCCR_TDERRCLR);
-	
-}
+//void RTC_Handler(void)
+//{	
+	///* Iniciar variaveis para setar localmente o horario atual durante a interrupcao*/
+	//unsigned int hora, minuto, segundo;
+	//uint32_t ul_status = rtc_get_status(RTC);
+//
+	///*
+	//*  Verifica por qual motivo entrou
+	//*  na interrupcao, se foi por segundo
+	//*  ou Alarm
+	//*/
+	//if ((ul_status & RTC_SR_SEC) == RTC_SR_SEC) {
+		//rtc_clear_status(RTC, RTC_SCCR_SECCLR);
+	//}
+	//
+	///* Time or date alarm */
+	///* O que vai fazer na interrupcao*/
+	//if ((ul_status & RTC_SR_ALARM) == RTC_SR_ALARM) {
+			//rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
+//
+			//flag_led0 = !flag_led0;
+			//
+	//}
+	//
+	////Para o alarme continuar mesmo dps de 1 minuto.
+	//if (segundo >=59){
+		//minuto +=1;
+	//}
+	///*Escrever nas variaveis o horario atual*/
+	//rtc_get_time(RTC, &hora,&minuto,&segundo);
+	///*A cada interrupcao iniciar o proximo alarme*/
+	//rtc_set_time_alarm(RTC,1,hora,1,minuto,1,segundo+5);
+	//rtc_clear_status(RTC, RTC_SCCR_ACKCLR);
+	//rtc_clear_status(RTC, RTC_SCCR_TIMCLR);
+	//rtc_clear_status(RTC, RTC_SCCR_CALCLR);
+	//rtc_clear_status(RTC, RTC_SCCR_TDERRCLR);
+	//
+//}
 
 /************************************************************************/
 /* Funcoes                                                              */
@@ -123,61 +123,62 @@ void RTC_Handler(void)
 
 
 
-void TC_init(Tc * TC, int ID_TC, int TC_CHANNEL, int freq){
-	uint32_t ul_div;
-	uint32_t ul_tcclks;
-	uint32_t ul_sysclk = sysclk_get_cpu_hz();
+//void TC_init(Tc * TC, int ID_TC, int TC_CHANNEL, int freq){
+	//uint32_t ul_div;
+	//uint32_t ul_tcclks;
+	//uint32_t ul_sysclk = sysclk_get_cpu_hz();
+//
+	//uint32_t channel = TC_CHANNEL;
+//
+	///* Configura o PMC */
+	///* O TimerCounter é meio confuso
+	//o uC possui 3 TCs, cada TC possui 3 canais
+	//TC0 : ID_TC0, ID_TC1, ID_TC2
+	//TC1 : ID_TC3, ID_TC4, ID_TC5
+	//TC2 : ID_TC6, ID_TC7, ID_TC8
+	//*/
+	//pmc_enable_periph_clk(ID_TC);
+//
+	///** Configura o TC para operar em  4Mhz e interrupçcão no RC compare */
+	//tc_find_mck_divisor(freq, ul_sysclk, &ul_div, &ul_tcclks, ul_sysclk);
+	//tc_init(TC, TC_CHANNEL, ul_tcclks | TC_CMR_CPCTRG);
+	//tc_write_rc(TC, TC_CHANNEL, (ul_sysclk / ul_div) / freq);
+//
+	///* Configura e ativa interrupçcão no TC canal 0 */
+	///* Interrupção no C */
+	//NVIC_EnableIRQ((IRQn_Type) ID_TC);
+	//tc_enable_interrupt(TC, TC_CHANNEL, TC_IER_CPCS);
+//
+	///* Inicializa o canal 0 do TC */
+	//tc_start(TC, TC_CHANNEL);
+//}
 
-	uint32_t channel = TC_CHANNEL;
-
-	/* Configura o PMC */
-	/* O TimerCounter é meio confuso
-	o uC possui 3 TCs, cada TC possui 3 canais
-	TC0 : ID_TC0, ID_TC1, ID_TC2
-	TC1 : ID_TC3, ID_TC4, ID_TC5
-	TC2 : ID_TC6, ID_TC7, ID_TC8
-	*/
-	pmc_enable_periph_clk(ID_TC);
-
-	/** Configura o TC para operar em  4Mhz e interrupçcão no RC compare */
-	tc_find_mck_divisor(freq, ul_sysclk, &ul_div, &ul_tcclks, ul_sysclk);
-	tc_init(TC, TC_CHANNEL, ul_tcclks | TC_CMR_CPCTRG);
-	tc_write_rc(TC, TC_CHANNEL, (ul_sysclk / ul_div) / freq);
-
-	/* Configura e ativa interrupçcão no TC canal 0 */
-	/* Interrupção no C */
-	NVIC_EnableIRQ((IRQn_Type) ID_TC);
-	tc_enable_interrupt(TC, TC_CHANNEL, TC_IER_CPCS);
-
-	/* Inicializa o canal 0 do TC */
-	tc_start(TC, TC_CHANNEL);
-}
-
-void RTC_init(){
-	/* Configura o PMC */
-	pmc_enable_periph_clk(ID_RTC);
-
-	/* Default RTC configuration, 24-hour mode */
-	rtc_set_hour_mode(RTC, 0);
-
-	/* Configura data e hora manualmente */
-	rtc_set_date(RTC, YEAR, MOUNTH, DAY, WEEK);
-	rtc_set_time(RTC, HOUR, MINUTE, SECOND);
-
-	/* Configure RTC interrupts */
-	NVIC_DisableIRQ(RTC_IRQn);
-	NVIC_ClearPendingIRQ(RTC_IRQn);
-	NVIC_SetPriority(RTC_IRQn, 0);
-	NVIC_EnableIRQ(RTC_IRQn);
-
-	/* Ativa interrupcao via alarme */
-	rtc_enable_interrupt(RTC,  RTC_IER_ALREN);
-
-}
+//void RTC_init(){
+	///* Configura o PMC */
+	//pmc_enable_periph_clk(ID_RTC);
+//
+	///* Default RTC configuration, 24-hour mode */
+	//rtc_set_hour_mode(RTC, 0);
+//
+	///* Configura data e hora manualmente */
+	//rtc_set_date(RTC, YEAR, MOUNTH, DAY, WEEK);
+	//rtc_set_time(RTC, HOUR, MINUTE, SECOND);
+//
+	///* Configure RTC interrupts */
+	//NVIC_DisableIRQ(RTC_IRQn);
+	//NVIC_ClearPendingIRQ(RTC_IRQn);
+	//NVIC_SetPriority(RTC_IRQn, 0);
+	//NVIC_EnableIRQ(RTC_IRQn);
+//
+	///* Ativa interrupcao via alarme */
+	//rtc_enable_interrupt(RTC,  RTC_IER_ALREN);
+//
+//}
 
 void butr_callback(void)
 {
-
+	N++;
+	butR_flag = true;
 }
 
 /*Inicia a configuracao da interrupcao do botao*/
@@ -198,9 +199,13 @@ void io_init(void)
 	pio_handler_set(BUTR_PIO,
 	BUTR_PIO_ID,
 	BUTR_IDX_MASK,
-	PIO_IT_FALL_EDGE,
+	PIO_IT_RISE_EDGE,
 	butr_callback);
-
+	
+	
+	pio_set_debounce_filter(BUTR_PIO,BUTR_IDX_MASK,1);
+	
+	
 	// Ativa interrupção
 	pio_enable_interrupt(BUTR_PIO, BUTR_IDX_MASK);
 
@@ -245,21 +250,33 @@ int main(void) {
 	configure_lcd();
 
 	/** Configura RTC */
-	RTC_init();
+	//RTC_init();
 	// configura botao com interrupcao
 	io_init();
 	
 	while(1) {
+		char buffer[32];
+		if(butR_flag){
+			
+			int dist= 2*PI*N;
+			sprintf(buffer, "%d",dist);
+			butR_flag = false;
+		}
 		
+		
+		
+		pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
+		
+		//Distancia
+		font_draw_text(&calibri_36, buffer, 50, 100, 1);
 		
 		//Tempo
 		font_draw_text(&sourcecodepro_28, "OIMUNDO", 50, 50, 1);
-		//Distancia
-		font_draw_text(&calibri_36, "Oi Mundo! #$!@", 50, 100, 1);
+		
 		//Velocidade
 		font_draw_text(&arial_72, "102456", 50, 200, 2);
 		
-		pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
+		
 		
 		
 	}
