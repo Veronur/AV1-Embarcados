@@ -17,6 +17,7 @@
 #define YEAR        2019
 #define MOUNTH      4
 #define DAY         8
+#define WEEK		12
 #define DAY         20
 #define HOUR        15
 #define MINUTE      10
@@ -30,6 +31,7 @@
 #define BUTR_PIO				  PIOA
 #define BUTR_IDX				  4
 #define BUTR_IDX_MASK			  (1 << BUTR_IDX)
+
 
 #define BUTP_PIO_ID			  ID_PIOA
 #define BUTP_PIO				  PIOA
@@ -46,6 +48,11 @@
 
 struct ili9488_opt_t g_ili9488_display_opt;
 
+/************************************************************************/
+/* PROTOTYPES                                                           */
+/************************************************************************/
+
+static void RTT_init(uint16_t pllPreScale, uint32_t IrqNPulses);
 
 /************************************************************************/
 /* Variaveis globais                                                           */
@@ -53,127 +60,63 @@ struct ili9488_opt_t g_ili9488_display_opt;
 
 volatile int N = 0;
 volatile Bool butR_flag;
+volatile Bool f_rtt_alarme = false;
+volatile Bool f_rtt_alarme1 = false;
+int n=0;
 
 /************************************************************************/
 /* Handlers                                                             */
 /************************************************************************/
 
-
-/**
-*  Interrupt handler for TC1 interrupt.
-*/
-//void tc1_handler(void){
-	//volatile uint32_t ul_dummy;
-//
-	///****************************************************************
-	//* devemos indicar ao tc que a interrupção foi satisfeita.
-	//******************************************************************/
-	//ul_dummy = tc_get_status(tc0, 1);
-//
-	///* avoid compiler warning */
-	//unused(ul_dummy);
-//
-//}
-
 /**
 * \brief Interrupt handler for the RTC. Refresh the display.
 */
-//void RTC_Handler(void)
-//{	
-	///* Iniciar variaveis para setar localmente o horario atual durante a interrupcao*/
-	//unsigned int hora, minuto, segundo;
-	//uint32_t ul_status = rtc_get_status(RTC);
-//
-	///*
-	//*  Verifica por qual motivo entrou
-	//*  na interrupcao, se foi por segundo
-	//*  ou Alarm
-	//*/
-	//if ((ul_status & RTC_SR_SEC) == RTC_SR_SEC) {
-		//rtc_clear_status(RTC, RTC_SCCR_SECCLR);
-	//}
-	//
-	///* Time or date alarm */
-	///* O que vai fazer na interrupcao*/
-	//if ((ul_status & RTC_SR_ALARM) == RTC_SR_ALARM) {
-			//rtc_clear_status(RTC, RTC_SCCR_ALRCLR);
-//
-			//flag_led0 = !flag_led0;
-			//
-	//}
-	//
-	////Para o alarme continuar mesmo dps de 1 minuto.
-	//if (segundo >=59){
-		//minuto +=1;
-	//}
-	///*Escrever nas variaveis o horario atual*/
-	//rtc_get_time(RTC, &hora,&minuto,&segundo);
-	///*A cada interrupcao iniciar o proximo alarme*/
-	//rtc_set_time_alarm(RTC,1,hora,1,minuto,1,segundo+5);
-	//rtc_clear_status(RTC, RTC_SCCR_ACKCLR);
-	//rtc_clear_status(RTC, RTC_SCCR_TIMCLR);
-	//rtc_clear_status(RTC, RTC_SCCR_CALCLR);
-	//rtc_clear_status(RTC, RTC_SCCR_TDERRCLR);
-	//
-//}
+void RTT_Handler(void)
+{
+	uint32_t ul_status;
+
+	/* Get RTT status */
+	ul_status = rtt_get_status(RTT);
+
+	/* IRQ due to Time has changed */
+	if ((ul_status & RTT_SR_RTTINC) == RTT_SR_RTTINC) {  }
+
+	/* IRQ due to Alarm */
+	if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
+		f_rtt_alarme = true;                  // flag RTT alarme
+	}
+}
+
 
 /************************************************************************/
 /* Funcoes                                                              */
 /************************************************************************/
 
+static float get_time_rtt(){
+	uint ul_previous_time = rtt_read_timer_value(RTT);
+}
 
 
-//void TC_init(Tc * TC, int ID_TC, int TC_CHANNEL, int freq){
-	//uint32_t ul_div;
-	//uint32_t ul_tcclks;
-	//uint32_t ul_sysclk = sysclk_get_cpu_hz();
-//
-	//uint32_t channel = TC_CHANNEL;
-//
-	///* Configura o PMC */
-	///* O TimerCounter é meio confuso
-	//o uC possui 3 TCs, cada TC possui 3 canais
-	//TC0 : ID_TC0, ID_TC1, ID_TC2
-	//TC1 : ID_TC3, ID_TC4, ID_TC5
-	//TC2 : ID_TC6, ID_TC7, ID_TC8
-	//*/
-	//pmc_enable_periph_clk(ID_TC);
-//
-	///** Configura o TC para operar em  4Mhz e interrupçcão no RC compare */
-	//tc_find_mck_divisor(freq, ul_sysclk, &ul_div, &ul_tcclks, ul_sysclk);
-	//tc_init(TC, TC_CHANNEL, ul_tcclks | TC_CMR_CPCTRG);
-	//tc_write_rc(TC, TC_CHANNEL, (ul_sysclk / ul_div) / freq);
-//
-	///* Configura e ativa interrupçcão no TC canal 0 */
-	///* Interrupção no C */
-	//NVIC_EnableIRQ((IRQn_Type) ID_TC);
-	//tc_enable_interrupt(TC, TC_CHANNEL, TC_IER_CPCS);
-//
-	///* Inicializa o canal 0 do TC */
-	//tc_start(TC, TC_CHANNEL);
-//}
+static void RTT_init(uint16_t pllPreScale, uint32_t IrqNPulses)
+{
+	uint32_t ul_previous_time;
 
-//void RTC_init(){
-	///* Configura o PMC */
-	//pmc_enable_periph_clk(ID_RTC);
-//
-	///* Default RTC configuration, 24-hour mode */
-	//rtc_set_hour_mode(RTC, 0);
-//
-	///* Configura data e hora manualmente */
-	//rtc_set_date(RTC, YEAR, MOUNTH, DAY, WEEK);
-	//rtc_set_time(RTC, HOUR, MINUTE, SECOND);
-//
-	///* Configure RTC interrupts */
-	//NVIC_DisableIRQ(RTC_IRQn);
-	//NVIC_ClearPendingIRQ(RTC_IRQn);
-	//NVIC_SetPriority(RTC_IRQn, 0);
-	//NVIC_EnableIRQ(RTC_IRQn);
-//
-	///* Ativa interrupcao via alarme */
-	//rtc_enable_interrupt(RTC,  RTC_IER_ALREN);
-//
-//}
+	/* Configure RTT for a 1 second tick interrupt */
+	rtt_sel_source(RTT, false);
+	rtt_init(RTT, pllPreScale);
+	
+	ul_previous_time = rtt_read_timer_value(RTT);
+	while (ul_previous_time == rtt_read_timer_value(RTT));
+	
+	rtt_write_alarm_time(RTT, IrqNPulses+ul_previous_time);
+
+	/* Enable RTT interrupt */
+	NVIC_DisableIRQ(RTT_IRQn);
+	NVIC_ClearPendingIRQ(RTT_IRQn);
+	NVIC_SetPriority(RTT_IRQn, 0);
+	NVIC_EnableIRQ(RTT_IRQn);
+	rtt_enable_interrupt(RTT, RTT_MR_ALMIEN);
+}
 
 void butr_callback(void)
 {
@@ -181,7 +124,6 @@ void butr_callback(void)
 	butR_flag = true;
 }
 
-/*Inicia a configuracao da interrupcao do botao*/
 void io_init(void)
 {
 
@@ -203,7 +145,7 @@ void io_init(void)
 	butr_callback);
 	
 	
-	pio_set_debounce_filter(BUTR_PIO,BUTR_IDX_MASK,1);
+	pio_set_debounce_filter(BUTR_PIO,BUTR_IDX_MASK,4);
 	
 	
 	// Ativa interrupção
@@ -248,33 +190,105 @@ int main(void) {
 	board_init();
 	sysclk_init();	
 	configure_lcd();
+	
+	/* Disable the watchdog */
+	WDT->WDT_MR = WDT_MR_WDDIS;
 
 	/** Configura RTC */
-	//RTC_init();
-	// configura botao com interrupcao
+
 	io_init();
+
+	f_rtt_alarme = true;
+	f_rtt_alarme1 = true;
+	
+	font_draw_text(&calibri_36, "Distancia:", 10, 100, 1);
+	font_draw_text(&calibri_36, "Tempo:", 10, 50, 1);
+	font_draw_text(&calibri_36, "Velocidade:", 10, 150, 2);
+	
 	
 	while(1) {
-		char buffer[32];
+		char bufferD[32];
+		char bufferV[32];
+
+		char bufferSeg[32];
+		char bufferMin[32];
+		char bufferHour[32];
+		int seg=0;
+		int min=0;
+		int hour=0;
+		
+		//if (f_rtt_alarme1){
+			//seg=rtt_read_timer_value(RTT);
+			//if (seg>60){
+				//min++;
+				//seg-=60;
+			//}
+			//if (min>60){
+				//hour++;
+				//min-=60;
+				//
+//
+			//}
+			//
+			////Tempo
+			//sprintf(bufferSeg, "%d",seg);
+			//font_draw_text(&calibri_36, bufferSeg, 250, 50, 1);
+			//sprintf(bufferSeg, "%d",min);
+			//font_draw_text(&calibri_36, bufferMin, 200, 50, 1);
+			//sprintf(bufferSeg, "%d",hour);
+			//font_draw_text(&calibri_36, bufferHour, 150, 50, 1);
+			//
+			//uint16_t pllPreScale = (int) (((float) 32768) / 2.0);
+			//uint32_t irqRTTvalue  = 2;
+			//RTT_init(pllPreScale, irqRTTvalue);
+			//f_rtt_alarme = false;
+		//}
+		
 		if(butR_flag){
 			
 			int dist= 2*PI*N;
-			sprintf(buffer, "%d",dist);
+			sprintf(bufferD, "%d",dist);
+			
+			
 			butR_flag = false;
 		}
 		
 		
 		
+		if (f_rtt_alarme){
+					
+					//Distancia
+					font_draw_text(&calibri_36,  bufferD, 200, 100, 1);
+					
+					
+					
+					//Velocidade
+					int vel =(2*PI*N-2*PI*n)/rtt_read_timer_value(RTT);
+					sprintf(bufferV, "%d",vel);
+					font_draw_text(&calibri_36, bufferV, 230, 150, 2);
+					n=N;
+					
+					
+					
+					
+					uint16_t pllPreScale = (int) (((float) 32768) / 2.0);
+					uint32_t irqRTTvalue  = 8;
+					RTT_init(pllPreScale, irqRTTvalue); 
+     
+					f_rtt_alarme = false;
+		}
 		pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
 		
-		//Distancia
-		font_draw_text(&calibri_36, buffer, 50, 100, 1);
+		
+
+		
+		
+		
+		
+		
 		
 		//Tempo
-		font_draw_text(&sourcecodepro_28, "OIMUNDO", 50, 50, 1);
-		
-		//Velocidade
-		font_draw_text(&arial_72, "102456", 50, 200, 2);
+		//font_draw_text(&arial_72, "102456", 50, 200, 2);
 		
 		
 		
